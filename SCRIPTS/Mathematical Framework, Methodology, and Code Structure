@@ -1,0 +1,1088 @@
+
+
+1. Introduction
+
+Traditional football analytics relies on aggregate statistics such as goals scored, expected goals, or possession. While these metrics provide valuable insights, they fail to capture the dynamic nature of matches.
+
+A football match is inherently a sequential process where the outcome depends on how teams navigate intermediate situations. Therefore, this project models matches as stochastic processes, where each situation is represented as a state and transitions occur over time.
+
+The core idea is:
+
+Performance is determined by the ability of a team to transform game states into favorable absorbing outcomes (win, draw, loss).
+
+To formalize this, we use an absorbing Markov chain framework, allowing us to estimate outcome probabilities from any game state.
+
+2. Data Reconstruction
+
+The first step consists of reconstructing match dynamics from event-level data.
+
+Let:
+
+𝐺
+𝑡
+(
+𝑖
+)
+G
+t
+(i)
+	​
+
+ be the number of goals scored by team 
+𝑖
+i up to time 
+𝑡
+t
+𝐶
+𝑡
+(
+𝑖
+)
+C
+t
+(i)
+	​
+
+ be the number of goals conceded
+
+We define the live score difference as:
+
+𝐷
+𝑡
+(
+𝑖
+)
+=
+𝐺
+𝑡
+(
+𝑖
+)
+−
+𝐶
+𝑡
+(
+𝑖
+)
+D
+t
+(i)
+	​
+
+=G
+t
+(i)
+	​
+
+−C
+t
+(i)
+	​
+
+
+This quantity evolves over time through goal events.
+
+To ensure consistency, we verify that:
+
+𝐺
+𝑇
+(
+𝑖
+)
+=
+𝐺
+official
+(
+𝑖
+)
+,
+𝐶
+𝑇
+(
+𝑖
+)
+=
+𝐶
+official
+(
+𝑖
+)
+G
+T
+(i)
+	​
+
+=G
+official
+(i)
+	​
+
+,C
+T
+(i)
+	​
+
+=C
+official
+(i)
+	​
+
+
+This validation step guarantees that the reconstructed process matches the final match outcome.
+
+3. State Space Construction
+
+Each match is discretized into states defined by:
+
+score difference 
+𝐷
+𝑡
+∈
+{
+−
+2
+,
+−
+1
+,
+0
+,
++
+1
+,
++
+2
+}
+D
+t
+	​
+
+∈{−2,−1,0,+1,+2}
+time bucket 
+𝑇
+𝑡
+∈
+{
+𝑇
+1
+,
+𝑇
+2
+,
+𝑇
+3
+,
+𝑇
+4
+}
+T
+t
+	​
+
+∈{T1,T2,T3,T4}
+
+Thus, each state is:
+
+𝑆
+𝑡
+=
+(
+𝐷
+𝑡
+,
+𝑇
+𝑡
+)
+S
+t
+	​
+
+=(D
+t
+	​
+
+,T
+t
+	​
+
+)
+
+The total number of transient states is:
+
+∣
+𝑆
+∣
+=
+5
+×
+4
+=
+20
+∣S∣=5×4=20
+
+Additionally, we define three absorbing states:
+
+𝐴
+=
+{
+Win
+,
+Draw
+,
+Loss
+}
+A={Win,Draw,Loss}
+4. Transition Dynamics
+
+We model the evolution of the match as a Markov process:
+
+𝑃
+(
+𝑆
+𝑡
++
+1
+=
+𝑗
+∣
+𝑆
+𝑡
+=
+𝑖
+,
+𝑆
+𝑡
+−
+1
+,
+…
+)
+=
+𝑃
+(
+𝑆
+𝑡
++
+1
+=
+𝑗
+∣
+𝑆
+𝑡
+=
+𝑖
+)
+P(S
+t+1
+	​
+
+=j∣S
+t
+	​
+
+=i,S
+t−1
+	​
+
+,…)=P(S
+t+1
+	​
+
+=j∣S
+t
+	​
+
+=i)
+
+This is the Markov assumption, which states that the future depends only on the current state.
+
+Transitions are observed empirically from data:
+
+𝑁
+𝑖
+𝑗
+=
+number of transitions from state 
+𝑖
+ to 
+𝑗
+N
+ij
+	​
+
+=number of transitions from state i to j
+
+We estimate transition probabilities as:
+
+𝑃
+𝑖
+𝑗
+=
+𝑁
+𝑖
+𝑗
+∑
+𝑘
+𝑁
+𝑖
+𝑘
+P
+ij
+	​
+
+=
+∑
+k
+	​
+
+N
+ik
+	​
+
+N
+ij
+	​
+
+	​
+
+5. Absorbing Markov Chain
+
+We partition the transition matrix 
+𝑃
+P into:
+
+𝑃
+=
+[
+𝑄
+	
+𝑅
+
+
+0
+	
+𝐼
+]
+P=[
+Q
+0
+	​
+
+R
+I
+	​
+
+]
+
+Where:
+
+𝑄
+Q: transitions between transient states
+𝑅
+R: transitions from transient to absorbing states
+5.1 Fundamental Matrix
+
+The fundamental matrix is defined as:
+
+𝑁
+=
+(
+𝐼
+−
+𝑄
+)
+−
+1
+N=(I−Q)
+−1
+
+This matrix represents the expected number of visits to each transient state before absorption.
+
+5.2 Absorption Probabilities
+
+The key quantity is:
+
+𝐵
+=
+𝑁
+𝑅
+B=NR
+
+Where:
+
+𝐵
+𝑖
+𝑗
+=
+𝑃
+(
+absorption in state 
+𝑗
+∣
+starting from state 
+𝑖
+)
+B
+ij
+	​
+
+=P(absorption in state j∣starting from state i)
+
+Thus, for any game state 
+𝑖
+i, we can compute:
+
+𝑃
+(
+Win
+∣
+𝑆
+=
+𝑖
+)
+,
+𝑃
+(
+Draw
+∣
+𝑆
+=
+𝑖
+)
+,
+𝑃
+(
+Loss
+∣
+𝑆
+=
+𝑖
+)
+P(Win∣S=i),P(Draw∣S=i),P(Loss∣S=i)
+6. Team-Level Modeling
+
+The previous framework is applied to each team individually.
+
+For team 
+𝑘
+k, we estimate:
+
+𝑃
+𝑖
+𝑗
+(
+𝑘
+)
+=
+𝑁
+𝑖
+𝑗
+(
+𝑘
+)
+∑
+𝑙
+𝑁
+𝑖
+𝑙
+(
+𝑘
+)
+P
+ij
+(k)
+	​
+
+=
+∑
+l
+	​
+
+N
+il
+(k)
+	​
+
+N
+ij
+(k)
+	​
+
+	​
+
+
+However, when the number of observations is small, these estimates become unstable.
+
+7. Shrinkage and Regularization
+
+To address this issue, we introduce a shrinkage estimator:
+
+𝑝
+^
+𝑖
+𝑗
+(
+𝑘
+)
+=
+𝑛
+𝑖
+(
+𝑘
+)
+⋅
+𝑝
+𝑖
+𝑗
+(
+𝑘
+)
++
+𝜆
+⋅
+𝑝
+𝑖
+𝑗
+(
+global
+)
+𝑛
+𝑖
+(
+𝑘
+)
++
+𝜆
+p
+^
+	​
+
+ij
+(k)
+	​
+
+=
+n
+i
+(k)
+	​
+
++λ
+n
+i
+(k)
+	​
+
+⋅p
+ij
+(k)
+	​
+
++λ⋅p
+ij
+(global)
+	​
+
+	​
+
+
+Where:
+
+𝑛
+𝑖
+(
+𝑘
+)
+n
+i
+(k)
+	​
+
+: number of observations from state 
+𝑖
+i
+𝑝
+𝑖
+𝑗
+(
+global
+)
+p
+ij
+(global)
+	​
+
+: global transition probability
+𝜆
+λ: regularization parameter
+Justification
+
+This estimator is a form of Bayesian shrinkage, where:
+
+the team-specific estimate is the likelihood
+the global estimate acts as a prior
+
+This reduces variance at the cost of a small bias, improving overall stability.
+
+8. Feature Engineering
+
+From the absorption matrix 
+𝐵
+B, we construct interpretable performance metrics.
+
+8.1 Open Game Performance
+
+Defined as:
+
+OpenGame
+𝑘
+=
+1
+∣
+𝑇
+∣
+∑
+𝑡
+∈
+{
+𝑇
+1
+,
+𝑇
+2
+,
+𝑇
+3
+,
+𝑇
+4
+}
+𝑃
+(
+Win
+∣
+𝑆
+=
+(
+0
+,
+𝑡
+)
+)
+OpenGame
+k
+	​
+
+=
+∣T∣
+1
+	​
+
+t∈{T1,T2,T3,T4}
+∑
+	​
+
+P(Win∣S=(0,t))
+8.2 Resilience
+Resilience
+𝑘
+=
+1
+∣
+𝑇
+∣
+∑
+𝑡
+[
+𝑃
+(
+Win
+∣
+𝑆
+=
+(
+−
+1
+,
+𝑡
+)
+)
++
+𝑃
+(
+Draw
+∣
+𝑆
+=
+(
+−
+1
+,
+𝑡
+)
+)
+]
+Resilience
+k
+	​
+
+=
+∣T∣
+1
+	​
+
+t
+∑
+	​
+
+[P(Win∣S=(−1,t))+P(Draw∣S=(−1,t))]
+8.3 Game Management
+Management
+𝑘
+=
+1
+∣
+𝑇
+∣
+∑
+𝑡
+𝑃
+(
+Win
+∣
+𝑆
+=
+(
++
+1
+,
+𝑡
+)
+)
+Management
+k
+	​
+
+=
+∣T∣
+1
+	​
+
+t
+∑
+	​
+
+P(Win∣S=(+1,t))
+8.4 Clutch Performance
+Clutch
+𝑘
+=
+𝑃
+(
+Win
+∣
+𝑆
+=
+(
++
+1
+,
+𝑇
+4
+)
+)
+Clutch
+k
+	​
+
+=P(Win∣S=(+1,T4))
+9. Statistical Analysis
+
+We evaluate the relationship between these metrics and total points using Spearman correlation:
+
+𝜌
+(
+𝑋
+,
+𝑌
+)
+=
+corr
+Spearman
+(
+𝑋
+,
+𝑌
+)
+ρ(X,Y)=corr
+Spearman
+	​
+
+(X,Y)
+
+Results:
+
+OpenGame → 
+𝜌
+≈
+0.939
+ρ≈0.939
+Management → 
+𝜌
+≈
+0.636
+ρ≈0.636
+Clutch → 
+𝜌
+≈
+0.646
+ρ≈0.646
+Resilience → 
+𝜌
+≈
+0.554
+ρ≈0.554
+Interpretation
+
+The dominance of OpenGame suggests that:
+
+Performance
+≈
+𝑓
+(
+ability to win neutral states
+)
+Performance≈f(ability to win neutral states)
+10. Timing Analysis
+
+We define:
+
+Δ
+open
+=
+𝑃
+(
+Win
+∣
+(
+0
+,
+𝑇
+4
+)
+)
+−
+𝑃
+(
+Win
+∣
+(
+0
+,
+𝑇
+1
+)
+)
+Δ
+open
+	​
+
+=P(Win∣(0,T4))−P(Win∣(0,T1))
+
+Observed:
+
+Δ
+open
+<
+0
+Δ
+open
+	​
+
+<0
+Interpretation
+
+Strong teams have:
+
+𝑃
+(
+Win
+∣
+(
+0
+,
+𝑇
+1
+)
+)
+>
+𝑃
+(
+Win
+∣
+(
+0
+,
+𝑇
+4
+)
+)
+P(Win∣(0,T1))>P(Win∣(0,T4))
+
+Meaning they are more effective early in matches.
+
+11. PCA (Dimensionality Reduction)
+
+We apply PCA to the feature matrix 
+𝑋
+X:
+
+𝑍
+=
+𝑋
+𝑊
+Z=XW
+
+Where:
+
+𝑊
+W: eigenvectors of covariance matrix
+Interpretation
+PC1 → overall strength
+PC2 → resilience vs management
+PC3 → open game
+PC4 → clutch
+12. Clustering
+
+We apply K-means:
+
+min
+⁡
+𝐶
+∑
+𝑘
+=
+1
+𝐾
+∑
+𝑖
+∈
+𝐶
+𝑘
+∥
+𝑥
+𝑖
+−
+𝜇
+𝑘
+∥
+2
+C
+min
+	​
+
+k=1
+∑
+K
+	​
+
+i∈C
+k
+	​
+
+∑
+	​
+
+∥x
+i
+	​
+
+−μ
+k
+	​
+
+∥
+2
+Result
+
+Teams cluster into:
+
+dominant
+balanced
+weak
+13. Why Teams Lose Points
+
+We define:
+
+FailOpen
+𝑘
+=
+1
+−
+OpenGame
+𝑘
+FailOpen
+k
+	​
+
+=1−OpenGame
+k
+	​
+
+LoseLead
+𝑘
+=
+1
+−
+Management
+𝑘
+LoseLead
+k
+	​
+
+=1−Management
+k
+	​
+
+FailResilience
+𝑘
+=
+1
+−
+Resilience
+𝑘
+FailResilience
+k
+	​
+
+=1−Resilience
+k
+	​
+
+Key Result
+FailOpen
+≫
+LoseLead
+,
+FailResilience
+FailOpen≫LoseLead,FailResilience
+Interpretation
+
+The main reason teams lose points is:
+
+failure to convert neutral states into wins
+failure to convert neutral states into wins
+14. Conclusion
+
+This project demonstrates that football performance can be effectively modeled using an absorbing Markov framework.
+
+The main result is:
+
+Performance
+≈
+Ability to win from neutral states
+Performance≈Ability to win from neutral states
+
+Strong teams do not necessarily excel in all dimensions, but they consistently convert open situations into victories.
+
+Conversely, weaker teams do not primarily lose points due to collapse or lack of resilience, but because they fail to take the lead.
